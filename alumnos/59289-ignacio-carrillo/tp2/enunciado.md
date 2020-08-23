@@ -13,12 +13,12 @@ Fecha de entrega: 16/06/2020
 <!-- El mensaje esteganográfico se debe leer desde el archivo con formato ascii indicado por la opción "-m archivo" o "--message archivo". -->
 
 <!-- La aplicación deberá implementar el algoritmo esteganográfico que se describe a continuación y guardar el resultante en un archivo indicado por la opción "-o archivo" o "--output archivo" que será el archivo de salida o estego-mensaje. -->
-
+<!-- 
 En primer lugar se debe modificar el encabezado del archivo original, adicionando como primera linea de comentario la siguiente:
 
 #UMCOMPU2 OFFSET INTERLEAVE L_TOTAL
 
-Esto permitirá poder recuperar el mensaje esteganográfico en el futuro.
+Esto permitirá poder recuperar el mensaje esteganográfico en el futuro. -->
 
 El método esteganográfico a usar es LSB (Least Significant Bit). Donde OFFSET indica el primer pixel desde donde se aplicará el método, INTERLEAVE cada cuantos pixeles se aplica y L_TOTAL el tamaño total (en bytes) del mensaje esteganográfico.
 
@@ -30,7 +30,7 @@ Para mejorar el rendimiento, se exige implementar la solución creando 3 hilos a
 
 Una vez finalizado proceso de creación del estego-mensaje deben terminar los hilos adicionales, y el proceso debe mostrar un mensaje con el tiempo que demoró el proceso.
 
-Los valores de OFFSET e INTERLEAVE se proveerán con las siguientes opciones "-e pixels" o "--offset pixels" y "-i pixels"  o "--interleave pixels" respectivamente. 
+<!-- Los valores de OFFSET e INTERLEAVE se proveerán con las siguientes opciones "-e pixels" o "--offset pixels" y "-i pixels"  o "--interleave pixels" respectivamente.  -->
 
 Finalmente se pide validar INTERLEAVE, en función del tamaño del raster del portador y el largo del mensaje esteganográfico.
 

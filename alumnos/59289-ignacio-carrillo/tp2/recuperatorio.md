@@ -15,11 +15,11 @@ Se necesita una desarrollar una aplicación que implemente esteganografía, util
 
 <!-- La aplicación deberá implementar el algoritmo esteganográfico que se describe a continuación y guardar el resultante en un archivo indicado por la opción "-o archivo" o "--output archivo" que será el archivo de salida o estego-mensaje. -->
 
-En primer lugar se debe modificar el encabezado del archivo original, adicionando como primera linea de comentario la siguiente:
+<!-- En primer lugar se debe modificar el encabezado del archivo original, adicionando como primera linea de comentario la siguiente:
 
 #UMCOMPU2 OFFSET INTERLEAVE L_TOTAL
 
-Esto permitirá poder recuperar el mensaje esteganográfico en el futuro.
+Esto permitirá poder recuperar el mensaje esteganográfico en el futuro. -->
 
 El método esteganográfico a usar es LSB (Least Significant Bit). Donde OFFSET indica el primer pixel desde donde se aplicará el método, INTERLEAVE cada cuantos pixeles se aplica y L_TOTAL el tamaño total (en bytes) del mensaje esteganográfico.
 
@@ -37,11 +37,11 @@ Adicionalmnete se pide validar INTERLEAVE, en función del tamaño del raster de
 
 Por último se debe hacer una aplicación que extraga el mensage oculto en la imagen portadora, los parámetros de OFFSET INTERLEAVE L_TOTAL los deberá sacar del encabezado.
 
-El recuperatorio agrega la posibilidad de poder cifrar el mensaje original con la opción -c o "--cifrado", utilizando para ello un hilo adicional que aplique el cifrado rot13 al texto del mensaje que se quiere ocultar, antes de aplicar esteganografía. En caso de aplicar el cifrado adicional, el encabezado se debe generar de la siguiente manera :
+<!-- El recuperatorio agrega la posibilidad de poder cifrar el mensaje original con la opción -c o "--cifrado", utilizando para ello un hilo adicional que aplique el cifrado rot13 al texto del mensaje que se quiere ocultar, antes de aplicar esteganografía. En caso de aplicar el cifrado adicional, el encabezado se debe generar de la siguiente manera :
 
 #UMCOMPU2-C OFFSET INTERLEAVE L_TOTAL
 
-de esta manera la aplicación que extrae el mensaje sabrá si debe o no aplicar el cifrado rot13 nuevamente.
+de esta manera la aplicación que extrae el mensaje sabrá si debe o no aplicar el cifrado rot13 nuevamente. -->
 
 ### Requerimientos
 

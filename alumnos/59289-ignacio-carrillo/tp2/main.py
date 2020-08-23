@@ -1,6 +1,7 @@
 import argparse
 import os
-
+import threading
+import array
 
 def parser():
 
@@ -68,6 +69,7 @@ def leer_mensaje(archivo, bloque):
     for i in lista_binario:
         mensaje_binario += "{}".format(i)
 
+    os.close(fd_mensaje)
     return mensaje_binario, len(lista_binario)
 
 
@@ -96,13 +98,31 @@ def rot13(fd_mensaje,bloque, archivo):
             break
 
 
-def modificar_header(fd_escritura,header,linea):
-    header=header[0:3]+linea.encode()+header[2:]
-    os.write(fd_escritura,header)
-    return header 
+def calcular_offset(bloque):
+    lineas=bloque.splitlines()
+    offset=0
+
+    for linea in lineas:
+        if linea==b'P6':
+            offset+=len(linea)+1
+        elif linea[0]==ord('#'):
+            offset+=len(linea)+1
+        elif len(linea.split())==2:
+            offset+=len(linea)+1
+        else:
+            offset+=len(linea)+1
+            break
+    
+    return offset
+
+
+def modificar_header(header,linea_ad):
+    header=header[:3]+linea_ad.encode()+header[2:]
+    return header
 
 
 if __name__ == "__main__":
+
     os.system("reset")
 
     # instancio el parser de argumentos
@@ -111,11 +131,11 @@ if __name__ == "__main__":
     # manejo errores de los argumentos anteriores y devuelvo el fd del contenedor y del msj si estos existen
     fd_imgcont,fd_msj=manejo_errores(argumentos)
 
-    #realizo el cifrado del msj
-    #crear hilo y el main lo debe esperar a q termine para seguir
+    #Creo e inicializo el hilo q realiza el cifrado
     if argumentos.cifrado == True:
-        rot13(fd_msj,argumentos.size,argumentos.message) 
-    #una vez q termino el hilo de cifrado
+        hilo_cifrado=threading.Thread(target=rot13,args=(fd_msj,argumentos.size,argumentos.message))
+        hilo_cifrado.start()
+        hilo_cifrado.join() #Para leer el msj, debo esperar q este cifrado, asique espero al hilo cifrador
 
     #leer mensaje y pasar a binario, y devuelvo la long de msj en bytes
     mensaje_bin,long_msj = leer_mensaje(argumentos.message,argumentos.size)
@@ -125,6 +145,16 @@ if __name__ == "__main__":
         linea_header="#UMCOMPU2-C {} {} {}".format(str(argumentos.offset),str(argumentos.interleave),str(long_msj))
     else:
         linea_header="#UMCOMPU2 {} {} {}".format(str(argumentos.offset),str(argumentos.interleave),str(long_msj))
+    
+    #Lectura parcial de la imagen para buscar el header
+    busq_header=os.read(fd_imgcont,100)
+    offset=calcular_offset(busq_header)
+    os.lseek(fd_imgcont,offset,0) #posiciono el offset al inicio del raster
+
+    #Armo y escribo el nuevo header
+    header=modificar_header(busq_header[:offset],linea_header)
+    salida=open(argumentos.output,"wb", os.O_CREAT)
+    salida.write(bytearray(header.decode(),'ascii'))
+    rgb_bytes=["{0:08b}".format(i) for i in os.read(fd_imgcont,argumentos.size)]
 
     
-
