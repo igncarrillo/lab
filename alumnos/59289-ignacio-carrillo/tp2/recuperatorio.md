@@ -1,14 +1,15 @@
+
 # COMPUTACION II
 
 
-## TP2
+## RECUPERATORIO TP2
 
-Fecha de entrega: 16/06/2020
+Fecha de entrega: 24/08/2020
 
 
 ### Problema
-
-<!-- Se necesita desarrollar una aplicación que implemente esteganografía, utilizando una imágen con formato portátil pixmap (ppm) indicado por la opcion "-f archivo" o "--file archivo" como portador o contenedor.  -->
+<!-- 
+Se necesita una desarrollar una aplicación que implemente esteganografía, utilizando una imágen con formato portátil pixmap (ppm) indicado por la opcion "-f archivo" o "--file archivo" como portador o contenedor.  -->
 
 <!-- El mensaje esteganográfico se debe leer desde el archivo con formato ascii indicado por la opción "-m archivo" o "--message archivo". -->
 
@@ -29,11 +30,18 @@ La aplicación debe ir leyendo la imagen por bloques de n bytes indicadas por la
 Para mejorar el rendimiento, se exige implementar la solución creando 3 hilos adicionales (uno por cada color) que trabajarán de manera concurrente y éstos serán los que hagan la modificación del archivo portador para obtener el archivo de salida.
 
 Una vez finalizado proceso de creación del estego-mensaje deben terminar los hilos adicionales, y el proceso debe mostrar un mensaje con el tiempo que demoró el proceso.
+<!-- 
+Los valores de OFFSET e INTERLEAVE se proveerán con las siguientes opciones "-e pixels" o "--offset pixels" y "-i pixels"  o "--interleave pixels" respectivamente.  -->
 
-Los valores de OFFSET e INTERLEAVE se proveerán con las siguientes opciones "-e pixels" o "--offset pixels" y "-i pixels"  o "--interleave pixels" respectivamente. 
+Adicionalmnete se pide validar INTERLEAVE, en función del tamaño del raster del portador y el largo del mensaje esteganográfico.
 
-Finalmente se pide validar INTERLEAVE, en función del tamaño del raster del portador y el largo del mensaje esteganográfico.
+Por último se debe hacer una aplicación que extraga el mensage oculto en la imagen portadora, los parámetros de OFFSET INTERLEAVE L_TOTAL los deberá sacar del encabezado.
 
+El recuperatorio agrega la posibilidad de poder cifrar el mensaje original con la opción -c o "--cifrado", utilizando para ello un hilo adicional que aplique el cifrado rot13 al texto del mensaje que se quiere ocultar, antes de aplicar esteganografía. En caso de aplicar el cifrado adicional, el encabezado se debe generar de la siguiente manera :
+
+#UMCOMPU2-C OFFSET INTERLEAVE L_TOTAL
+
+de esta manera la aplicación que extrae el mensaje sabrá si debe o no aplicar el cifrado rot13 nuevamente.
 
 ### Requerimientos
 
@@ -84,5 +92,4 @@ http://netpbm.sourceforge.net/doc/ppm.html
 https://itnext.io/steganography-101-lsb-introduction-with-python-4c4803e08041
 
 ### Bonus Track
-Realizar una aplicación que pueda extraer el mensage oculto en la imagen portadora.
 
