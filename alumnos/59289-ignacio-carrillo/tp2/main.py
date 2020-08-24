@@ -45,6 +45,13 @@ def manejo_errores(argumentos):
         print("El archivo mensaje no existe en el directorio de trabajo\n")
         exit(-1)
 
+    if argumentos.offset<0:
+        print("EL valor del offset debe ser mayor o igual a cero\n")
+        exit(-1)
+
+    if argumentos.interleave<1:
+        print("El valor de interleave debe ser mayor a cero\n")
+
     # correcion de tamaño bloque para que sea divisible por 3, incluir todos los colores de un pixel en la lectura
     if argumentos.size % 3 != 0:
         argumentos.size += (3-(argumentos.size % 3))
@@ -64,10 +71,11 @@ def leer_mensaje(archivo, bloque):
         if len(mensaje_leido) != bloque:
             break
 
-    # convierto la lista en una chorrera de bits
-    mensaje_binario = ''
+    # convierto la lista de bytes binarios en una lista de bits
+    mensaje_binario = []
     for i in lista_binario:
-        mensaje_binario += "{}".format(i)
+        for j in i:
+            mensaje_binario.append(j)
 
     os.close(fd_mensaje)
     return mensaje_binario, len(lista_binario)
@@ -155,6 +163,31 @@ if __name__ == "__main__":
     header=modificar_header(busq_header[:offset],linea_header)
     salida=open(argumentos.output,"wb", os.O_CREAT)
     salida.write(bytearray(header.decode(),'ascii'))
-    rgb_bytes=["{0:08b}".format(i) for i in os.read(fd_imgcont,argumentos.size)]
 
+    #Testear validez del portador
+    bytes_imagen=os.path.getsize(argumentos.file)
+    if(len(mensaje_bin)*argumentos.interleave+offset)>bytes_imagen:
+        print("El numero de bytes necesarios para el estegomensaje, son mayores que los disponibles en el portador\n")
+        exit(-1)
+
+    #Determinar posiciones del raster a modificar para esconder el msj
+    posiciones_raster=[]
+    color=0
+    for indiceR in range(argumentos.offset*3,bytes_imagen,argumentos.interleave*3):
+        posiciones_raster.append(color+indiceR)
+        color+=1
+        if color==3:
+            color=0
+        if(len(posiciones_raster)==len(mensaje_bin)): #solo me interesan los indices necesarios para esconder el mensaje
+            break
     
+    #Separo las posiciones correspondientes a cada color RGB
+    pos_r=[posiciones_raster[i] for i in range(0,len(posiciones_raster),3)]
+    pos_g=[posiciones_raster[j] for j in range(1,len(posiciones_raster),3)]
+    pos_b=[posiciones_raster[k] for k in range(2,len(posiciones_raster),3)]
+
+    #Coloco los bits del mensaje en la cola correspondiente
+    msj_r=[]
+    msj_g=[]
+    msj_b=[]
+
