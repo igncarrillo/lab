@@ -2,6 +2,12 @@ import argparse
 import os
 import threading
 import array
+from concurrent import futures
+from time import time
+
+global leido #variable global q almacena el bloque leido
+barrera= threading.Barrier(4) #barrera q espera por los 4 hilos --> 3 y main. Pto de encuentro
+candado= threading.Lock() #Excl mutua 
 
 def parser():
 
@@ -129,9 +135,26 @@ def modificar_header(header,linea_ad):
     return header
 
 
-if __name__ == "__main__":
+def generar_imagen(indices,msj,t_bytes,indice_h):
+    global leido
+    print("hilo {}".format(indice_h))
+    escrito=0
 
-    os.system("reset")
+    while escrito<t_bytes:
+        escrito=len(leido)
+        while indices!=[] and indices[0]<escrito: #me fijo q la lista no este vacia, y no escribir donde aun no leo
+            candado.acquire()
+            indice=indices.pop(0)
+            leido[indice]=leido[indice][:7]+msj.pop(0)
+            candado.release()
+        barrera.wait()
+
+
+if __name__ == "__main__":
+    
+    start= time() #inicializo el tiempo p calcular cuanto demora
+
+    os.system("reset") 
 
     # instancio el parser de argumentos
     argumentos = parser()
@@ -157,7 +180,7 @@ if __name__ == "__main__":
     #Lectura parcial de la imagen para buscar el header
     busq_header=os.read(fd_imgcont,100)
     offset=calcular_offset(busq_header)
-    os.lseek(fd_imgcont,offset,0) #posiciono el offset al inicio del raster
+    os.lseek(fd_imgcont,offset,0) #posiciono el offset al inicio del raster para la lectura
 
     #Armo y escribo el nuevo header
     header=modificar_header(busq_header[:offset],linea_header)
@@ -166,7 +189,7 @@ if __name__ == "__main__":
 
     #Testear validez del portador
     bytes_imagen=os.path.getsize(argumentos.file)
-    if(len(mensaje_bin)*argumentos.interleave+offset)>bytes_imagen:
+    if(len(mensaje_bin)*argumentos.interleave+offset)>(bytes_imagen-offset):
         print("El numero de bytes necesarios para el estegomensaje, son mayores que los disponibles en el portador\n")
         exit(-1)
 
@@ -186,8 +209,42 @@ if __name__ == "__main__":
     pos_g=[posiciones_raster[j] for j in range(1,len(posiciones_raster),3)]
     pos_b=[posiciones_raster[k] for k in range(2,len(posiciones_raster),3)]
 
-    #Coloco los bits del mensaje en la cola correspondiente
+    indices=(pos_r,pos_g,pos_b)
+
+    #Coloco los bits del mensaje en las colas correspondientes
     msj_r=[]
     msj_g=[]
     msj_b=[]
 
+    for i in range(0,len(mensaje_bin),3):
+        msj_r.append(mensaje_bin[i])
+        try:
+            msj_g.append(mensaje_bin[i+1])
+            msj_b.append(mensaje_bin[i+2])
+        except:
+            break
+    
+    msj=(msj_r,msj_g,msj_b)
+
+    #lanzo los hilos que esconden mensaje y escriben la nueva imagen
+    threads = futures.ThreadPoolExecutor(max_workers=10)
+    [threads.submit(generar_imagen,indices[i],msj[i],bytes_imagen-offset,i) for i in range(3)]
+
+    #inicializo la lista de lectura
+    global leido
+    leido=[]
+
+    while True:
+        candado.acquire()
+        bloque=os.read(fd_imgcont,argumentos.size)
+        leido +=["{0:08b}".format(i) for i in bloque]
+        candado.release()
+        barrera.wait()
+        if len(bloque)!=argumentos.size:
+            break
+
+    print("listo")
+
+    
+
+    
