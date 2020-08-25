@@ -133,7 +133,7 @@ if __name__ == "__main__":
     #Lectura parcial de la imagen para buscar el header
     busq_header=os.read(fd_imgcont,100)
     offset=calcular_offset(busq_header)
-    os.lseek(fd_imgcont,offset,0) #posiciono el offset al inicio del header para la lectura
+    os.lseek(fd_imgcont,offset,0) #posiciono el offset al inicio del raster para la lectura
 
     #Armo y escribo el nuevo header
     header=modificar_header(busq_header[:offset],linea_header)
@@ -146,7 +146,7 @@ if __name__ == "__main__":
         print("El numero de bytes necesarios para el estegomensaje, son mayores que los disponibles en el portador\n")
         exit(-1)
 
-    #Determinar posiciones del header a modificar para esconder el msj
+    #Determinar posiciones del raster a modificar para esconder el msj
     posiciones_raster=[]
     color=0
     for indiceR in range(argumentos.offset*3,bytes_imagen,argumentos.interleave*3):
@@ -207,7 +207,7 @@ if __name__ == "__main__":
     for i in range(3):
       print("El hilo ",i+1,"ha finalizado correctamente")
 
-    #Realizo la conversion del mensaje en binario a hexa para escribir nuevamente el header
+    #Realizo la conversion del mensaje en binario a hexa para escribir nuevamente el raster
     for i in range(len(leido)):
         leido[i]=hex(int(leido[i],2))[2:].zfill(2)
     
