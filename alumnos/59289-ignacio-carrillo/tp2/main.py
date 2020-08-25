@@ -1,36 +1,14 @@
-import argparse
 import os
 import threading
 import array
 from concurrent import futures
 from time import time
+from cifrado import rot13
+from parser import parser
 
 global leido #variable global q almacena el bloque leido
 barrera= threading.Barrier(4) #barrera q espera por los 4 hilos --> 3 y main. Pto de encuentro
 candado= threading.Lock() #Excl mutua 
-
-def parser():
-
-    parser = argparse.ArgumentParser(
-        description="TP2 - Envio de mensaje esteganografico")
-    parser.add_argument('-f', '--file', type=str, required=True,
-                        metavar='', help='Nombre del archivo .ppm previo')
-    parser.add_argument('-m', '--message', type=str, required=True, metavar='',
-                        help='Nombre del archivo .txt donde se encuentra el mensaje')
-    parser.add_argument('-o', '--output', default="output.ppm", type=str,
-                        required=False, metavar='', help='Nombre del archivo .ppm con estegomensaje')
-    parser.add_argument('-s', '--size', default=12, type=int,
-                        required=False, metavar='', help='Tamaño del bloque n de lectura')
-    parser.add_argument('-e', '--offset', default=0, type=int, required=False,
-                        metavar='', help='Pixel del raster a partir del cual se escribe el mensaje')
-    parser.add_argument('-i', '--interleave', default=1, type=int, required=False,
-                        metavar='', help='Interleave usado en el estegomensaje')
-    parser.add_argument('-c', '--cifrado', default=False, type=bool,
-                        required=False, metavar='', help='Mecanismo de cifrado')
-
-    args = parser.parse_args(("-f", "dog.ppm", "-m", "mensaje.txt", "-c", " "))
-
-    return args
 
 
 def manejo_errores(argumentos):
@@ -87,31 +65,6 @@ def leer_mensaje(archivo, bloque):
     return mensaje_binario, len(lista_binario)
 
 
-def rot13(fd_mensaje,bloque, archivo):
-    #Abro un fd para escribir el msj cifrado
-    fd_escritura=os.open(archivo,os.O_WRONLY | os.O_CREAT)
-
-    #realizo el cifrado o descrifrado del msj 
-    Cifrado = ''
-    while True:
-        mensaje=os.read(fd_mensaje,bloque)
-        for buff in mensaje:
-                if (buff >= 65 and buff <= 90) or (buff >= 97 and buff <= 122):
-                    if ((buff + 13 > 90 and buff + 13 <= 103) or (buff + 13 > 122 and buff + 13 <= 135)):
-                        Cifrado += chr(buff - 13)
-                    else:
-                        Cifrado += chr(buff + 13)
-                else:
-                    Cifrado+=' '                    
-        os.write(fd_escritura,Cifrado.encode())  #Escribo el msj y vacio el string
-        Cifrado=''
-
-        if(len(mensaje)!=bloque):
-            os.close(fd_escritura)
-            os.close(fd_mensaje)
-            break
-
-
 def calcular_offset(bloque):
     lineas=bloque.splitlines()
     offset=0
@@ -130,14 +83,13 @@ def calcular_offset(bloque):
     return offset
 
 
-def modificar_header(header,linea_ad):
-    header=header[:3]+linea_ad.encode()+header[2:]
-    return header
+def modificar_raster(raster,linea_ad):
+    raster=raster[:3]+linea_ad.encode()+raster[2:]
+    return raster
 
 
 def generar_imagen(indices,msj,t_bytes,indice_h):
     global leido
-    print("hilo {}".format(indice_h))
     escrito=0
 
     while escrito<t_bytes:
@@ -145,9 +97,10 @@ def generar_imagen(indices,msj,t_bytes,indice_h):
         while indices!=[] and indices[0]<escrito: #me fijo q la lista no este vacia, y no escribir donde aun no leo
             candado.acquire()
             indice=indices.pop(0)
-            leido[indice]=leido[indice][:7]+msj.pop(0)
+            leido[indice]=leido[indice][:7]+msj.pop(0) #cambio el LSB del byte correspondiente
             candado.release()
         barrera.wait()
+    return indice_h
 
 
 if __name__ == "__main__":
@@ -171,21 +124,21 @@ if __name__ == "__main__":
     #leer mensaje y pasar a binario, y devuelvo la long de msj en bytes
     mensaje_bin,long_msj = leer_mensaje(argumentos.message,argumentos.size)
 
-    #armo comentario para agregar a header 
+    #armo comentario para agregar a raster 
     if argumentos.cifrado == True:
-        linea_header="#UMCOMPU2-C {} {} {}".format(str(argumentos.offset),str(argumentos.interleave),str(long_msj))
+        linea_raster="#UMCOMPU2-C {} {} {}".format(str(argumentos.offset),str(argumentos.interleave),str(long_msj))
     else:
-        linea_header="#UMCOMPU2 {} {} {}".format(str(argumentos.offset),str(argumentos.interleave),str(long_msj))
+        linea_raster="#UMCOMPU2 {} {} {}".format(str(argumentos.offset),str(argumentos.interleave),str(long_msj))
     
-    #Lectura parcial de la imagen para buscar el header
-    busq_header=os.read(fd_imgcont,100)
-    offset=calcular_offset(busq_header)
+    #Lectura parcial de la imagen para buscar el raster
+    busq_raster=os.read(fd_imgcont,100)
+    offset=calcular_offset(busq_raster)
     os.lseek(fd_imgcont,offset,0) #posiciono el offset al inicio del raster para la lectura
 
-    #Armo y escribo el nuevo header
-    header=modificar_header(busq_header[:offset],linea_header)
+    #Armo y escribo el nuevo raster
+    raster=modificar_raster(busq_raster[:offset],linea_raster)
     salida=open(argumentos.output,"wb", os.O_CREAT)
-    salida.write(bytearray(header.decode(),'ascii'))
+    salida.write(bytearray(raster.decode(),'ascii'))
 
     #Testear validez del portador
     bytes_imagen=os.path.getsize(argumentos.file)
@@ -226,14 +179,15 @@ if __name__ == "__main__":
     
     msj=(msj_r,msj_g,msj_b)
 
-    #lanzo los hilos que esconden mensaje y escriben la nueva imagen
-    threads = futures.ThreadPoolExecutor(max_workers=10)
-    [threads.submit(generar_imagen,indices[i],msj[i],bytes_imagen-offset,i) for i in range(3)]
-
     #inicializo la lista de lectura
     global leido
     leido=[]
 
+    #lanzo los hilos que esconden mensaje y escriben la nueva imagen
+    threads = futures.ThreadPoolExecutor()
+    futuros= [threads.submit(generar_imagen,indices[i],msj[i],bytes_imagen-offset,i) for i in range(3)]
+
+    #Lectura por bloques de la imagen contenedora
     while True:
         candado.acquire()
         bloque=os.read(fd_imgcont,argumentos.size)
@@ -242,9 +196,28 @@ if __name__ == "__main__":
         barrera.wait()
         if len(bloque)!=argumentos.size:
             break
-
-    print("listo")
-
     
-
+    #Deshabilito el punto de encuentro 
+    try:
+        barrera.wait(0.1)
+    except threading.BrokenBarrierError:
+        pass
     
+    for i in range(3):
+        futuros[i].result()
+        print("El hilo ",i+1,"ha finalizado correctamente")
+
+    #Realizo la conversion del mensaje en binario a hexa para escribir nuevamente el raster
+    for i in range(len(leido)):
+        leido[i]=hex(int(leido[i],2))[2:].zfill(2)
+    
+    raster=''
+    raster+="".join(leido)
+    raster=bytes.fromhex(raster)
+    salida.write(raster)
+    salida.close()
+
+    #Calculo del tiempo, y mensaje de finalizacion
+    print("El hilo padre ha finalizado correctamente\n")
+    print("El estegomensaje ha sido creado con exito\n")
+    print("Tiempo total: ",str(time()-start)[:6]," segundos\n")
