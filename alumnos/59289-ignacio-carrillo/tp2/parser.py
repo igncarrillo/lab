@@ -10,7 +10,7 @@ def parser():
                         help='Nombre del archivo .txt donde se encuentra el mensaje')
     parser.add_argument('-o', '--output', default="output.ppm", type=str,
                         required=False, metavar='', help='Nombre del archivo .ppm con estegomensaje')
-    parser.add_argument('-s', '--size', default=12, type=int,
+    parser.add_argument('-s', '--size', default=1024, type=int,
                         required=False, metavar='', help='Tamaño del bloque n de lectura')
     parser.add_argument('-e', '--offset', default=0, type=int, required=False,
                         metavar='', help='Pixel del raster a partir del cual se escribe el mensaje')
@@ -19,6 +19,6 @@ def parser():
     parser.add_argument('-c', '--cifrado', default=False, type=bool,
                         required=False, metavar='', help='Mecanismo de cifrado')
 
-    args = parser.parse_args(("-f", "dog.ppm", "-m", "mensaje.txt", "-c", " "))
+    args = parser.parse_args()
 
     return args

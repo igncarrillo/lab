@@ -83,9 +83,9 @@ def calcular_offset(bloque):
     return offset
 
 
-def modificar_raster(raster,linea_ad):
-    raster=raster[:3]+linea_ad.encode()+raster[2:]
-    return raster
+def modificar_header(header,linea_ad):
+    header=header[:3]+linea_ad.encode()+header[2:]
+    return header
 
 
 def generar_imagen(indices,msj,t_bytes,indice_h):
@@ -124,21 +124,21 @@ if __name__ == "__main__":
     #leer mensaje y pasar a binario, y devuelvo la long de msj en bytes
     mensaje_bin,long_msj = leer_mensaje(argumentos.message,argumentos.size)
 
-    #armo comentario para agregar a raster 
+    #armo comentario para agregar a header 
     if argumentos.cifrado == True:
-        linea_raster="#UMCOMPU2-C {} {} {}".format(str(argumentos.offset),str(argumentos.interleave),str(long_msj))
+        linea_header="#UMCOMPU2-C {} {} {}".format(str(argumentos.offset),str(argumentos.interleave),str(long_msj))
     else:
-        linea_raster="#UMCOMPU2 {} {} {}".format(str(argumentos.offset),str(argumentos.interleave),str(long_msj))
+        linea_header="#UMCOMPU2 {} {} {}".format(str(argumentos.offset),str(argumentos.interleave),str(long_msj))
     
-    #Lectura parcial de la imagen para buscar el raster
-    busq_raster=os.read(fd_imgcont,100)
-    offset=calcular_offset(busq_raster)
-    os.lseek(fd_imgcont,offset,0) #posiciono el offset al inicio del raster para la lectura
+    #Lectura parcial de la imagen para buscar el header
+    busq_header=os.read(fd_imgcont,100)
+    offset=calcular_offset(busq_header)
+    os.lseek(fd_imgcont,offset,0) #posiciono el offset al inicio del header para la lectura
 
-    #Armo y escribo el nuevo raster
-    raster=modificar_raster(busq_raster[:offset],linea_raster)
+    #Armo y escribo el nuevo header
+    header=modificar_header(busq_header[:offset],linea_header)
     salida=open(argumentos.output,"wb", os.O_CREAT)
-    salida.write(bytearray(raster.decode(),'ascii'))
+    salida.write(bytearray(header.decode(),'ascii'))
 
     #Testear validez del portador
     bytes_imagen=os.path.getsize(argumentos.file)
@@ -146,7 +146,7 @@ if __name__ == "__main__":
         print("El numero de bytes necesarios para el estegomensaje, son mayores que los disponibles en el portador\n")
         exit(-1)
 
-    #Determinar posiciones del raster a modificar para esconder el msj
+    #Determinar posiciones del header a modificar para esconder el msj
     posiciones_raster=[]
     color=0
     for indiceR in range(argumentos.offset*3,bytes_imagen,argumentos.interleave*3):
@@ -203,11 +203,11 @@ if __name__ == "__main__":
     except threading.BrokenBarrierError:
         pass
     
-    for i in range(3):
-        futuros[i].result()
-        print("El hilo ",i+1,"ha finalizado correctamente")
 
-    #Realizo la conversion del mensaje en binario a hexa para escribir nuevamente el raster
+    for i in range(3):
+      print("El hilo ",i+1,"ha finalizado correctamente")
+
+    #Realizo la conversion del mensaje en binario a hexa para escribir nuevamente el header
     for i in range(len(leido)):
         leido[i]=hex(int(leido[i],2))[2:].zfill(2)
     
@@ -218,6 +218,7 @@ if __name__ == "__main__":
     salida.close()
 
     #Calculo del tiempo, y mensaje de finalizacion
-    print("El hilo padre ha finalizado correctamente\n")
-    print("El estegomensaje ha sido creado con exito\n")
+    print("\nEl estegomensaje ha sido creado con exito\n")
     print("Tiempo total: ",str(time()-start)[:6]," segundos\n")
+    print("El tamaño del header en bytes es:",len(header),"")
+    print("Longitud del msj bytes:",long_msj,"\n")
