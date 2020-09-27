@@ -4,7 +4,7 @@
         <title>Index</title>
     </head>
     <body>
-        <form>
+        <form action="/dog.ppm">
     <p>Archivo dog.ppm <br> <br></p>
     <p>
         Filtros:&nbsp;
@@ -12,10 +12,11 @@
         <input type="radio" name="filter" value="G">Green
         <input type="radio" name="filter" value="B">Blue
         <input type="radio" name="filter" value="W">B&W
+        <input type="radio" name="filter" value="N" checked>None
     </p>
     <p>
         <label for="int">Intensidad ( entre 0 y 200% ) </label>
-        <input type="number" id="int" name="Intensity" min="0" max="200" step="10">%
+        <input type="number" id="int" name="Intensity" min="0" max="200" step="10" value="100">%
     </p>
     <p><input type="submit" value="Enviar datos"></p>
 </form>
