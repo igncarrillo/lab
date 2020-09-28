@@ -8,7 +8,7 @@ def parser():
                         metavar='', help='Puerto en donde se esperan conexiones nuevas')
     parser.add_argument('-d', '--document-root', type=str , default="/index.html", required=False, metavar='',
                         help='Directorio donde se encuentran los documentos web')
-    parser.add_argument('-s', '--size', default=1024, type=int, required=False, metavar='',
+    parser.add_argument('-s', '--size', default=1000, type=int, required=False, metavar='',
                         help='Bloque de lectura de los documentos web')
 
     args = parser.parse_args()

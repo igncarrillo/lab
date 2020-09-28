@@ -15,18 +15,73 @@ class Handler(socketserver.BaseRequestHandler):
             else:
                 path=f"{path}{required}"
 
-            if  "dog.ppm?" in path:
-                filter, int = self.queryAnalizer(path)
-                path=f"{os.getcwd()}/dog.ppm"
+            self.repairSize()
+
+            if  ".ppm?" in path:
+                filter, intensity = self.queryAnalizer(path)
+                if "dog.ppm?" in path:
+                    path=f"{os.getcwd()}/dog.ppm"
+                else:
+                    path = f"{os.getcwd()}/yacht.ppm"
                 fdr=os.open(path,os.O_RDONLY)
                 search=os.read(fdr,1024)
                 offset=self.offsetAnalyzer(search)
+                os.lseek(fdr,offset,0)
                 header_ppm=search[:offset]
+                data=self.generateData(filter,intensity,fdr)
+                data=header_ppm+data
+                path, header = self.generateHeader(path)
+                to_send = header + data
+                self.request.sendall(to_send)
                 # threads_quantity=math.ceil(((os.stat(path).st_size-offset)-offset)/arguments.size)
                 # #os.lseek(fdr,offset+indiceHILO*argumento.size,0)
+            else:
+                path,header= self.generateHeader(path)
+                self.writeData(path,header)
 
-            path,header= self.generateHeader(path)
-            self.writeData(path,header)
+    def generateData(self,fltr,intensity,fdr):
+        data=b""
+        while True:
+            leido=os.read(fdr,arguments.size)
+            leido=[byte for byte in leido]
+            if fltr=="R":
+                for i in range(0,len(leido)-2,3):
+                    leido[i]=int(leido[i]*(intensity/100))
+                    if leido[i]>255:
+                        leido[i]=255
+                    leido[i+1]=0
+                    leido[i+2]=0
+            elif fltr=="G":
+                for i in range(1,len(leido)-1,3):
+                    leido[i]=int(leido[i]*(intensity/100))
+                    if leido[i]>255:
+                        leido[i]=255
+                    leido[i-1]=0
+                    leido[i+1]=0
+            elif fltr=="B":
+                for i in range(2,len(leido),3):
+                    leido[i]=int(leido[i]*(intensity/100))
+                    if leido[i]>255:
+                        leido[i]=255
+                    leido[i-1]=0
+                    leido[i-2]=0
+            elif fltr=="W":
+                for i in range(0,len(leido)-2,3):
+                    prom=int((leido[i]+leido[i+1]+leido[i+2])/3)
+                    leido[i]=leido[i+1]=leido[i+2]=prom
+                    leido[i]=int(leido[i]*(intensity/100))
+                    if leido[i]>255:
+                        leido[i]=255
+                    leido[i+2]=leido[i+1]=leido[i]
+            else:
+                for i in range(0,len(leido),1):
+                    leido[i]=int(leido[i]*(intensity/100))
+                    if leido[i]>255:
+                        leido[i]=255
+            data+=bytes(leido)
+            if (len(leido)!=arguments.size):
+                break
+        return  data
 
     def offsetAnalyzer(self, block):
         lines = block.splitlines()
@@ -86,18 +141,20 @@ class Handler(socketserver.BaseRequestHandler):
         return path,header
 
     def handle(self):
-        print("Conexion establecida con el cliente")
+        print("Conexion establecida con el cliente {}".format(self.client_address))
         self.data = self.request.recv(1024).decode()
         self.rules=self.data.splitlines()[0]
         self.analyzer(self.rules)
-        print("Cliente desconectado")
+        print("Cliente {} desconectado".format(self.client_address))
+
+    def repairSize(self):
+        if arguments.size % 3 != 0:
+            arguments.size += (3 - (arguments.size % 3))
 
 if __name__ == '__main__':
     os.system("reset")
     arguments=parser()
-    if arguments.size % 3 != 0:
-        arguments.size += (3-(arguments.size % 3))
-    print("Iniciando server...")
+    print("Iniciando server ...")
     socketserver.ForkingTCPServer.allow_reuse_address = True
     HOST, PORT = 'localhost', arguments.port
     with socketserver.ForkingTCPServer((HOST, PORT), Handler) as server:
