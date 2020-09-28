@@ -3,6 +3,7 @@ import os
 from parser import parser
 import math
 from filter import *
+from concurrent import futures
 
 class Handler(socketserver.BaseRequestHandler):
 
@@ -15,8 +16,6 @@ class Handler(socketserver.BaseRequestHandler):
             else:
                 path=f"{path}{required}"
 
-            self.repairSize()
-
             if  ".ppm?" in path:
                 filter, intensity = self.queryAnalizer(path)
                 if "dog.ppm?" in path:
@@ -28,59 +27,38 @@ class Handler(socketserver.BaseRequestHandler):
                 offset=self.offsetAnalyzer(search)
                 os.lseek(fdr,offset,0)
                 header_ppm=search[:offset]
-                data=self.generateData(filter,intensity,fdr)
+                threads_quantity = math.ceil(((os.stat(path).st_size - offset) - offset) / arguments.size)
+                data=self.generateData(filter,intensity,fdr,threads_quantity)
                 data=header_ppm+data
-                path, header = self.generateHeader(path)
+                path, header = self.generateHeader(path,"OK")
                 to_send = header + data
                 self.request.sendall(to_send)
-                # threads_quantity=math.ceil(((os.stat(path).st_size-offset)-offset)/arguments.size)
-                # #os.lseek(fdr,offset+indiceHILO*argumento.size,0)
+
             else:
-                path,header= self.generateHeader(path)
+                path,header= self.generateHeader(path,"OK")
                 self.writeData(path,header)
 
-    def generateData(self,fltr,intensity,fdr):
+    def generateData(self,fltr,intensity,fdr,tq):
         data=b""
-        while True:
+        threads= futures.ThreadPoolExecutor(max_workers=tq)
+        threads_list=[]
+        for i in range(tq):
             leido=os.read(fdr,arguments.size)
             leido=[byte for byte in leido]
             if fltr=="R":
-                for i in range(0,len(leido)-2,3):
-                    leido[i]=int(leido[i]*(intensity/100))
-                    if leido[i]>255:
-                        leido[i]=255
-                    leido[i+1]=0
-                    leido[i+2]=0
+                threads_list.append(threads.submit(redFilter,leido,intensity))
             elif fltr=="G":
-                for i in range(1,len(leido)-1,3):
-                    leido[i]=int(leido[i]*(intensity/100))
-                    if leido[i]>255:
-                        leido[i]=255
-                    leido[i-1]=0
-                    leido[i+1]=0
+                threads_list.append(threads.submit(greenFilter,leido,intensity))
             elif fltr=="B":
-                for i in range(2,len(leido),3):
-                    leido[i]=int(leido[i]*(intensity/100))
-                    if leido[i]>255:
-                        leido[i]=255
-                    leido[i-1]=0
-                    leido[i-2]=0
+                threads_list.append(threads.submit(blueFilter,leido,intensity))
             elif fltr=="W":
-                for i in range(0,len(leido)-2,3):
-                    prom=int((leido[i]+leido[i+1]+leido[i+2])/3)
-                    leido[i]=leido[i+1]=leido[i+2]=prom
-                    leido[i]=int(leido[i]*(intensity/100))
-                    if leido[i]>255:
-                        leido[i]=255
-                    leido[i+2]=leido[i+1]=leido[i]
+                threads_list.append(threads.submit(whiteFilter,leido,intensity))
             else:
-                for i in range(0,len(leido),1):
-                    leido[i]=int(leido[i]*(intensity/100))
-                    if leido[i]>255:
-                        leido[i]=255
-            data+=bytes(leido)
-            if (len(leido)!=arguments.size):
-                break
+                threads_list.append(threads.submit(noneFilter,leido,intensity))
+
+        for thread in threads_list:
+            data+=thread.result()
+
         return  data
 
     def offsetAnalyzer(self, block):
@@ -123,14 +101,23 @@ class Handler(socketserver.BaseRequestHandler):
         querys=(path.split("?")[1]).split("&")
         values=[value.split("=") for value in querys]
         for i in range(len(values)):
-            val_dict[values[i][0]]=values[i][1]
+            try:
+                val_dict[values[i][0]]=values[i][1]
+            except:
+                path=f"{os.getcwd()}/error500.html"
+                path, header=self.generateHeader(path)
+                self.writeData(path,header)
+                exit()
 
         return val_dict["filter"],int(val_dict["Intensity"])
 
-    def generateHeader(self,path):
+    def generateHeader(self,path,status="0"):
         mime={"jpg":"image/jpeg","pdf":"application/pdf","html":"text/html","ppm": "image/x-portable-pixmap"}
         if os.path.exists(path):
-            fline="HTTP/1.1 200 OK"
+            if status=="OK":
+                fline="HTTP/1.1 200 OK"
+            else:
+                fline="HTTP/1.1 500 Internal Server Error"
         else:
             path=f"{os.getcwd()}/error.html"
             fline ="HTTP/1.1 404 Not Found"
@@ -146,10 +133,6 @@ class Handler(socketserver.BaseRequestHandler):
         self.rules=self.data.splitlines()[0]
         self.analyzer(self.rules)
         print("Cliente {} desconectado".format(self.client_address))
-
-    def repairSize(self):
-        if arguments.size % 3 != 0:
-            arguments.size += (3 - (arguments.size % 3))
 
 if __name__ == '__main__':
     os.system("reset")
