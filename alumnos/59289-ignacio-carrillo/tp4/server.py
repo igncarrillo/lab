@@ -1,6 +1,7 @@
 import asyncio
 import socket
 from parser import parser
+import datetime as dt
 import os
 from os import scandir
 
@@ -8,7 +9,7 @@ global abspath
 
 async def handler(reader, writer):
     address = writer.get_extra_info('peername')
-    #asy.create_task(logs(ip, port))
+    asyncio.create_task(generar_logs(address[0],address[1]))
 
     lec = (await reader.read(args.size)).decode()
     if "GET" in lec:
@@ -30,12 +31,12 @@ async def handler(reader, writer):
         writer.close()
         await writer.wait_closed()
 
-# # Armo un log:
-# async def logs(ip, port):
-#     now = time.ctime()
-#     log = f'> client: {ip}:{port}; date:{now}\n'
-#     with open('logs.txt', 'a') as logs:
-#         logs.write(log)
+async def generar_logs(ip,port):
+    time=dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    registro="| Cliente: {} | Puerto: {} | Fecha: {} |\n".format(ip,port,time)
+    with open(f"{abspath}/log/log.txt","a") as file:
+        file.write(registro)
+    file.close()
 
 def generateHeader(path):
     mime={"jpg":"image/jpeg","pdf":"application/pdf","html":"text/html","ppm": "image/x-portable-pixmap"}
