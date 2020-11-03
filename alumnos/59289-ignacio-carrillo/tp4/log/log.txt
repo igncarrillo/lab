@@ -1,9 +1,0 @@
-| Cliente: 127.0.0.1 | Puerto: 53490 | Fecha: 2020-10-29 10:45:21 |
-| Cliente: 127.0.0.1 | Puerto: 53492 | Fecha: 2020-10-29 10:45:21 |
-| Cliente: 127.0.0.1 | Puerto: 53498 | Fecha: 2020-10-29 10:45:23 |
-| Cliente: 127.0.0.1 | Puerto: 53500 | Fecha: 2020-10-29 10:45:23 |
-| Cliente: 127.0.0.1 | Puerto: 53502 | Fecha: 2020-10-29 10:45:25 |
-| Cliente: 127.0.0.1 | Puerto: 53506 | Fecha: 2020-10-29 10:45:30 |
-| Cliente: 127.0.0.1 | Puerto: 53508 | Fecha: 2020-10-29 10:45:33 |
-| Cliente: 127.0.0.1 | Puerto: 53510 | Fecha: 2020-10-29 10:45:36 |
-| Cliente: 127.0.0.1 | Puerto: 53514 | Fecha: 2020-10-29 10:45:42 |
